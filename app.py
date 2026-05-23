@@ -96,7 +96,7 @@ st.markdown(f"""
     /* Mengatur teks di DALAM kotak input */
     .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] {{
         color: black !important;      
-        font-size: 20px !important;  
+        font-size: 12px !important;  
     }}
 
     /* Mengatur warna teks di samping tombol radio */
