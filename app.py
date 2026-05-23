@@ -210,7 +210,7 @@ with col_menu:
                 "background-color": "transparent",
             },
             "nav-link": {
-                "font-size": "16px",
+                "font-size": "12px",
                 "color": "#1a73e8",       
                 "text-align": "center",
                 "margin": "0px 30px",     # Jarak antar teks agar garis bawah tidak tabrakan
