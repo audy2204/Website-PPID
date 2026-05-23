@@ -79,7 +79,7 @@ def render_form_input():
                     "border-radius": "50px",          
                 },
                 "nav-link": {
-                    "font-size": "20px", 
+                    "font-size": "15px", 
                     "text-align": "center", 
                     "margin": "0px", 
                     "border-radius": "50px",            # Agar saat hover/pindah sudutnya melengkung
