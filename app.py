@@ -255,7 +255,7 @@ if df is not None:
         if sheet is not None:
             # Karena alur kita menyimpan data ke tab spesifik (Pengaduan/Aspirasi/dll)
             # Kita kirim objek spreadsheet utama 'sheet', bukan '.sheet1' tunggal
-            render_form_input(sheet)
+            render_form_input(sheet.sheet1)
         else:
             st.error("Formulir tidak dapat dibuka karena koneksi database terputus.")
     elif selected == "Data & Analisis":
