@@ -1,13 +1,16 @@
 import pandas as pd
 import os
 import gspread
+import streamlit as st
 from google.oauth2.service_account import Credentials
 import datetime
 
-# KONFIGURASI API GOOGLE SHEETS 
 def get_gsheet_client():
     scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    creds = Credentials.from_service_account_file("dindik-2026-c399ec22c103.json", scopes=scope)
+    
+    # Membaca kredensial langsung dari Streamlit Secrets (Format TOML)
+    secret_credentials = st.secrets["gcp_service_account"]
+    creds = Credentials.from_service_account_info(secret_credentials, scopes=scope)
     return gspread.authorize(creds)
 
 def save_to_google_sheets(data, kategory):
@@ -18,10 +21,10 @@ def save_to_google_sheets(data, kategory):
         client = get_gsheet_client()
         sh = client.open_by_key(SPREADSHEET_ID)
         
-        # 1. Pilih nama sheet (Pengaduan / Aspirasi / Permohonan Informasi)
+        # Pilih nama sheet (Pengaduan / Aspirasi / Permohonan Informasi)
         nama_sheet = kategory 
         
-        # 2. Cari worksheet, jika tidak ada maka buat baru
+        # Cari worksheet, jika tidak ada maka buat baru
         try:
             worksheet = sh.worksheet(nama_sheet)
         except gspread.exceptions.WorksheetNotFound:
@@ -29,7 +32,7 @@ def save_to_google_sheets(data, kategory):
             # Menambahkan header otomatis berdasarkan kunci dari dictionary data
             worksheet.append_row(list(data.keys()))
 
-        # 3. KIRIM DATA
+        # KIRIM DATA
         values = list(data.values())
         worksheet.append_row(values)
         
@@ -40,63 +43,77 @@ def save_to_google_sheets(data, kategory):
         print(f"❌ Gagal menyimpan ke Google Sheets: {e}")
         return False
 
-# FUNGSI UNTUK MEMBACA & MENGGABUNG DATA 
+# 🌟 2. FUNGSI UNTUK MEMBACA & MENGGABUNG DATA LANGSUNG DARI GOOGLE SHEETS
 def load_all_data():
-    files = {
-        'Pengaduan': r'DATA PENGADUAN BARU.xlsx',
-        'Aspirasi': r'DATA ASPIRASI.xlsx',
-        'Permohonan Informasi': r'DATA PERMOHONAN INFORMASI BARU.xlsx'
-    }
+    SPREADSHEET_ID = "1zkLC0xu87g1R_Er-wu9qnLMkiJJvn9NlPIN06-zySf0"
+    tabs = ['Pengaduan', 'Aspirasi', 'Permohonan Informasi']
     
     all_dfs = []
     
-    for tipe, path in files.items():
-        if os.path.exists(path):
+    try:
+        client = get_gsheet_client()
+        sh = client.open_by_key(SPREADSHEET_ID)
+        
+        for tipe in tabs:
             try:
-                df_temp = pd.read_excel(path)
-                if df_temp.empty: continue
+                worksheet = sh.worksheet(tipe)
+                records = worksheet.get_all_records()
+                
+                # Jika tab kosong, lewati
+                if not records:
+                    continue
                     
+                df_temp = pd.DataFrame(records)
                 df_temp['Tipe'] = tipe
                 
-                # 1. Penyeragaman Kolom Wilayah
-                if 'DAERAH YANG DILAPORKAN' in df_temp.columns:
-                    df_temp = df_temp.rename(columns={'DAERAH YANG DILAPORKAN': 'Wilayah'})
-                elif 'ASAL DAERAH' in df_temp.columns:
-                    df_temp = df_temp.rename(columns={'ASAL DAERAH': 'Wilayah'})
+                # --- PROSES CLEANING DATA ---
                 
-                # 2. Perhitungan Waktu Respon (Detik) - Durasi Terkecil
-                # Mengasumsikan ada kolom 'Waktu Masuk' dan 'Waktu Selesai'
-                if 'WAKTU MASUK' in df_temp.columns and 'WAKTU SELESAI' in df_temp.columns:
-                    t_masuk = pd.to_datetime(df_temp['WAKTU MASUK'], errors='coerce')
-                    t_selesai = pd.to_datetime(df_temp['WAKTU SELESAI'], errors='coerce')
-                    # Hitung selisih dalam detik
-                    durasi_detik = (t_selesai - t_masuk).dt.total_seconds()
-                    # Ambil nilai terkecil (minimum) dari data tersebut, jika tidak ada isi dengan 0
-                    df_temp['WAKTU RESPON'] = durasi_detik.min() if not durasi_detik.dropna().empty else 0
-                else:
-                    # Jika kolom tidak ditemukan, set default (misal 10 detik sebagai simulasi terkecil)
-                    df_temp['WAKTU RESPON'] = 10 
+                # 1. Penyeragaman Kolom Wilayah
+                # Menyesuaikan nama kolom jika di-input dalam huruf kapital/kecil
+                df_temp.columns = [col.upper() for col in df_temp.columns]
+                
+                if 'WILAYAH' in df_temp.columns:
+                    df_temp = df_temp.rename(columns={'WILAYAH': 'Wilayah'})
+                
+                # 2. Perhitungan Waktu Respon Default (Simulasi)
+                df_temp['WAKTU RESPON'] = 10 
 
-                # 3. Set Kepuasan Statis 87.9%
-                df_temp['SURVEY KEPUASAN'] = 87.9
+                # 3. Survey Kepuasan Berdasarkan Input/Statis
+                if 'KEPUASAN PELANGGAN' in df_temp.columns:
+                    # Map rating teks ke nilai angka jika dibutuhkan untuk visualisasi grafik
+                    df_temp['SURVEY KEPUASAN'] = df_temp['KEPUASAN PELANGGAN'].apply(
+                        lambda x: 100.0 if x == "Sangat Puas" else (80.0 if x == "Puas" else 60.0)
+                    )
+                else:
+                    df_temp['SURVEY KEPUASAN'] = 87.9
                 
                 # 4. Penyeragaman Tanggal & Filter Tahun
-                if 'TANGGAL' in df_temp.columns:
-                    df_temp['TANGGAL'] = pd.to_datetime(df_temp['TANGGAL'], errors='coerce')
-                    df_temp = df_temp.dropna(subset=['TANGGAL'])
-                    df_temp['Bulan'] = df_temp['TANGGAL'].dt.month_name()
-                    df_temp['Tahun'] = df_temp['TANGGAL'].dt.year
+                if 'TANGGAL INPUT' in df_temp.columns:
+                    df_temp['TANGGAL INPUT'] = pd.to_datetime(df_temp['TANGGAL INPUT'], errors='coerce')
+                    df_temp = df_temp.dropna(subset=['TANGGAL INPUT'])
+                    df_temp['Bulan'] = df_temp['TANGGAL INPUT'].dt.month_name()
+                    df_temp['Tahun'] = df_temp['TANGGAL INPUT'].dt.year
                 else:
                     df_temp['Bulan'] = 'January'
-                    df_temp['Tahun'] = 2025
+                    df_temp['Tahun'] = 2026
 
-                if 'JENIS KELAMIN' not in df_temp.columns:
-                    df_temp['JENIS KELAMIN'] = 'Laki-laki'
+                if 'JENIS KELAMIN' in df_temp.columns:
+                    df_temp = df_temp.rename(columns={'JENIS KELAMIN': 'Jenis Kelamin'})
+                else:
+                    df_temp['Jenis Kelamin'] = 'Laki-laki'
 
                 all_dfs.append(df_temp)
+                
+            except gspread.exceptions.WorksheetNotFound:
+                # Jika tab belum ada di Google Sheets, lewati saja
+                continue
             except Exception as e:
-                print(f"Error membaca {tipe}: {e}")
-    
+                print(f"Error membaca tab {tipe}: {e}")
+                
+    except Exception as e:
+        print(f"Gagal koneksi ke Google Sheets saat memuat data: {e}")
+        return None
+        
     if all_dfs:
         return pd.concat(all_dfs, ignore_index=True)
     return pd.DataFrame()
