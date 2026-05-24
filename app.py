@@ -1,10 +1,12 @@
 import streamlit as st
-# from turtle import color
 from streamlit_option_menu import option_menu
 from data_handler import load_all_data
 from form_input import render_form_input
 from visualisasi import render_visualisasi
 import base64
+import gspread
+from google.auth.exceptions import MutatedCredentialsError
+from google.oauth2.service_account import Credentials
 
 # KONFIGURASI HALAMAN
 st.set_page_config(page_title="Sistem Pelayanan Publik Dindik Jatim", layout="wide")
@@ -16,6 +18,22 @@ def get_base64(bin_file):
     return base64.b64encode(data).decode()
 
 bin_str = get_base64('bg.jpg')
+
+# 1. Definisikan scope access
+scopes = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+
+# 2. Ambil data dari Streamlit Secrets (Format TOML otomatis dikonversi jadi Dictionary)
+secret_credentials = st.secrets["gcp_service_account"]
+
+# 3. Buat kredensial login gspread
+creds = Credentials.from_service_account_info(secret_credentials, scopes=scopes)
+client = gspread.authorize(creds)
+
+# 4. Buka Google Sheet survey kamu
+sheet = client.open("pelayanan publik dindik").sheet1
 
 # CSS CUSTOM
 st.markdown(f"""
@@ -239,7 +257,7 @@ df = load_all_data()
 # LOGIKA HALAMAN
 if df is not None:
     if selected == "Dashboard Utama":
-        render_form_input()
+        render_form_input(sheet)
     elif selected == "Data & Analisis":
         render_visualisasi(df)
 else:
