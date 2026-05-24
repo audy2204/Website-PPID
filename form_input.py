@@ -56,7 +56,7 @@ def pop_up_survei(kategori_laporan, data_mentah):
             st.session_state.tampilkan_ai = False
             st.rerun()
 
-def render_form_input():
+def render_form_input(sheet):
     st.write("##")
     st.markdown("<h1 style='text-align: center;'>Pelayanan Publik Dinas Pendidikan Jawa Timur</h1>", unsafe_allow_html=True)
     st.write("##") 
