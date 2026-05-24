@@ -30,6 +30,7 @@ def render_visualisasi(df):
     m1, m2, m3, m4 = st.columns(4)
     
     total = len(df_filtered)
+    # Kolom 'Tipe' & 'JENIS KELAMIN' sekarang sudah dipastikan aman terbaca
     pengaduan = len(df_filtered[df_filtered['Tipe'] == 'Pengaduan'])
     aspirasi = len(df_filtered[df_filtered['Tipe'] == 'Aspirasi'])
     info = len(df_filtered[df_filtered['Tipe'] == 'Permohonan Informasi'])
@@ -63,15 +64,14 @@ def render_visualisasi(df):
                      category_orders={"Bulan": bulan_order},
                      color_discrete_sequence=px.colors.qualitative.Pastel)
     
-    # PERUBAHAN: Setel teks kontras tinggi & Efek kaca gelap tipis untuk grafik utama
     fig_bar.update_layout(
-        paper_bgcolor='rgba(0,0,0,0.4)', # Lapisan hitam transparan di luar area chart
-        plot_bgcolor='rgba(0,0,0,0.2)',  # Lapisan hitam transparan di dalam grid chart
+        paper_bgcolor='rgba(0,0,0,0.4)', 
+        plot_bgcolor='rgba(0,0,0,0.2)',  
         font=dict(family="Arial, sans-serif", size=13, color="white"), 
         xaxis=dict(
             title=dict(text="Bulan Laporan", font=dict(size=14, color="white")),
             tickfont=dict(color="white", size=12),
-            gridcolor='rgba(255,255,255,0.1)' # Garis grid tipis transparan
+            gridcolor='rgba(255,255,255,0.1)' 
         ),
         yaxis=dict(
             title=dict(text="Jumlah Laporan", font=dict(size=14, color="white")),
@@ -85,7 +85,6 @@ def render_visualisasi(df):
             borderwidth=1
         )
     )
-    # Memunculkan angka jumlah tebal berwarna putih di atas setiap batang diagram
     fig_bar.update_traces(
         texttemplate='%{y}',
         textposition='outside',
@@ -103,7 +102,6 @@ def render_visualisasi(df):
         fig_pie_gender = px.pie(df_filtered, names='JENIS KELAMIN', hole=0.5,
                                 color_discrete_sequence=px.colors.qualitative.Pastel)
         
-        # Setel teks & background transparan gelap untuk Donut Chart
         fig_pie_gender.update_layout(
             paper_bgcolor='rgba(0,0,0,0.4)', 
             font=dict(family="Arial, sans-serif", size=13, color="white"),
@@ -114,7 +112,6 @@ def render_visualisasi(df):
                 borderwidth=1
             )
         )
-        # Menampilkan persentase di dalam potongan kue dengan warna teks putih tajam
         fig_pie_gender.update_traces(
             textinfo='percent+label',
             textfont=dict(color='white', size=12, family='Arial-Bold')
@@ -132,10 +129,9 @@ def render_visualisasi(df):
             x='Wilayah', 
             y='Jumlah',
             labels={'Jumlah': 'Total', 'Wilayah': 'Daerah'},
-            color_discrete_sequence=['rgba(93, 158, 243, 0.86)'] # PERBAIKAN DI SINI
+            color_discrete_sequence=['rgba(93, 158, 243, 0.86)']
         )
         
-        # Setel teks & background transparan gelap untuk Bar Chart Wilayah
         fig_bar_wilayah.update_layout(
             paper_bgcolor='rgba(0,0,0,0.4)', 
             plot_bgcolor='rgba(0,0,0,0.2)', 
@@ -151,7 +147,6 @@ def render_visualisasi(df):
                 gridcolor='rgba(255,255,255,0.1)'
             )
         )
-        # Memunculkan nilai angka di atas diagram wilayah
         fig_bar_wilayah.update_traces(
             texttemplate='%{y}',
             textposition='outside',
