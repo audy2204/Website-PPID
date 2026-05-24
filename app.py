@@ -5,7 +5,6 @@ from form_input import render_form_input
 from visualisasi import render_visualisasi
 import base64
 import gspread
-from google.auth.exceptions import MutatedCredentialsError
 from google.oauth2.service_account import Credentials
 
 # KONFIGURASI HALAMAN
