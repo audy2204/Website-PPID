@@ -1,38 +1,34 @@
 import streamlit as st
 from streamlit_option_menu import option_menu
-from data_handler import load_all_data
-from form_input import render_form_input
-from visualisasi import render_visualisasi
 import base64
 import gspread
-from google.oauth2.service_account import Credentials
+from data_handler import get_gsheet_client, load_all_data
+from form_input import render_form_input
+from visualisasi import render_visualisasi
 
 # KONFIGURASI HALAMAN
 st.set_page_config(page_title="Sistem Pelayanan Publik Dindik Jatim", layout="wide")
 
-# mengubah gambar lokal ke Base64
+# Mengubah gambar lokal ke Base64 untuk Background
 def get_base64(bin_file):
-    with open(bin_file, 'rb') as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
+    try:
+        with open(bin_file, 'rb') as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+    except FileNotFoundError:
+        # Jika file bg.jpg tidak sengaja terhapus, sistem tidak akan crash total
+        return ""
 
 bin_str = get_base64('bg.jpg')
 
-# 1. Definisikan scope access
-scopes = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
-]
-
-# 2. Ambil data dari Streamlit Secrets (Format TOML otomatis dikonversi jadi Dictionary)
-secret_credentials = st.secrets["gcp_service_account"]
-
-# 3. Buat kredensial login gspread
-creds = Credentials.from_service_account_info(secret_credentials, scopes=scopes)
-client = gspread.authorize(creds)
-
-# 4. Buka Google Sheet survey kamu
-sheet = client.open("pelayanan publik dindik").sheet1
+# 🛠️ 2. KONEKSI GOOGLE SHEETS YANG AMAN & BERSIH
+try:
+    client = get_gsheet_client()
+    # Membuka Spreadsheet menggunakan ID agar akurat dan anti salah nama berkas
+    sheet = client.open_by_key("1zkLC0xu87g1R_Er-wu9qnLMkiJJvn9NlPIN06-zySf0")
+except Exception as e:
+    st.error(f"Gagal inisialisasi koneksi Google Sheets: {e}")
+    sheet = None
 
 # CSS CUSTOM
 st.markdown(f"""
@@ -180,7 +176,7 @@ st.markdown(f"""
     }}
 
     [data-testid="stMetricValue"] {{
-        color: white !important; /* Angka metrik putih */
+        color: white !important; 
         font-weight: bold !important;
     }}
 
@@ -192,7 +188,7 @@ st.markdown(f"""
     }}
 
     /* Menargetkan teks judul/label metrik (seperti "Total Laporan", "Pengaduan") */
-        [data-testid="stMetricLabel"]{{
+    [data-testid="stMetricLabel"]{{
         color: white !important;
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 0px rgba(0, 0, 0, 0.8) !important;
         font-weight: bold !important;
@@ -204,7 +200,6 @@ st.markdown(f"""
         text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.9), -1px -1px 0px rgba(0, 0, 0, 0.9) !important;
         font-weight: bold !important;
     }}
-
     </style>
     """, unsafe_allow_html=True)
 
@@ -230,7 +225,7 @@ with col_menu:
                 "font-size": "15px",
                 "color": "#1a73e8",       
                 "text-align": "center",
-                "margin": "0px 30px",     # Jarak antar teks agar garis bawah tidak tabrakan
+                "margin": "0px 30px",     
                 "padding": "5px 0px",    
                 "text-transform": "uppercase",
                 "font-weight": "bold",
@@ -251,13 +246,19 @@ with col_login:
         st.toast("Fitur Login Admin segera hadir!")
     st.markdown('</div>', unsafe_allow_html=True)
 
+# 🛠️ 3. EKSEKUSI PENJEMPUTAN DATA DATABASE ONLINE
 df = load_all_data()
 
 # LOGIKA HALAMAN
 if df is not None:
     if selected == "Dashboard Utama":
-        render_form_input(sheet)
+        if sheet is not None:
+            # Karena alur kita menyimpan data ke tab spesifik (Pengaduan/Aspirasi/dll)
+            # Kita kirim objek spreadsheet utama 'sheet', bukan '.sheet1' tunggal
+            render_form_input(sheet)
+        else:
+            st.error("Formulir tidak dapat dibuka karena koneksi database terputus.")
     elif selected == "Data & Analisis":
         render_visualisasi(df)
 else:
-    st.error("Gagal memuat data. Pastikan file excel tersedia.")
+    st.error("Gagal memuat data dari Cloud Google Sheets. Periksa konfigurasi Secrets Anda.")
