@@ -54,33 +54,34 @@ def load_all_data():
         client = get_gsheet_client()
         sh = client.open_by_key(SPREADSHEET_ID)
         
+# ... (kode bagian atas tetap sama) ...
+
         for tipe in tabs:
             try:
                 worksheet = sh.worksheet(tipe)
                 records = worksheet.get_all_records()
                 
-                # Jika tab kosong, lewati
                 if not records:
                     continue
                     
                 df_temp = pd.DataFrame(records)
-                df_temp['Tipe'] = tipe
                 
                 # --- PROSES CLEANING DATA ---
                 
-                # 1. Penyeragaman Kolom Wilayah
-                # Menyesuaikan nama kolom jika di-input dalam huruf kapital/kecil
+                # 1. Penyeragaman Kolom bawaan Sheet ke Huruf Kapital Besar
                 df_temp.columns = [col.upper() for col in df_temp.columns]
+                
+                # Tambahkan kolom 'Tipe' di sini setelah fungsi UPPER agar tidak ikut berubah jadi kapital semua
+                df_temp['Tipe'] = tipe
                 
                 if 'WILAYAH' in df_temp.columns:
                     df_temp = df_temp.rename(columns={'WILAYAH': 'Wilayah'})
                 
-                # 2. Perhitungan Waktu Respon Default (Simulasi)
+                # 2. Perhitungan Waktu Respon Default
                 df_temp['WAKTU RESPON'] = 10 
 
-                # 3. Survey Kepuasan Berdasarkan Input/Statis
+                # 3. Survey Kepuasan
                 if 'KEPUASAN PELANGGAN' in df_temp.columns:
-                    # Map rating teks ke nilai angka jika dibutuhkan untuk visualisasi grafik
                     df_temp['SURVEY KEPUASAN'] = df_temp['KEPUASAN PELANGGAN'].apply(
                         lambda x: 100.0 if x == "Sangat Puas" else (80.0 if x == "Puas" else 60.0)
                     )
@@ -97,18 +98,18 @@ def load_all_data():
                     df_temp['Bulan'] = 'January'
                     df_temp['Tahun'] = 2026
 
-                if 'JENIS KELAMIN' in df_temp.columns:
-                    df_temp = df_temp.rename(columns={'JENIS KELAMIN': 'Jenis Kelamin'})
-                else:
-                    df_temp['Jenis Kelamin'] = 'Laki-laki'
+                # PERBAIKAN: Gunakan 'JENIS KELAMIN' agar cocok dengan visualisasi.py
+                if 'JENIS KELAMIN' not in df_temp.columns:
+                    df_temp['JENIS KELAMIN'] = 'Laki-laki'
 
                 all_dfs.append(df_temp)
                 
             except gspread.exceptions.WorksheetNotFound:
-                # Jika tab belum ada di Google Sheets, lewati saja
                 continue
             except Exception as e:
                 print(f"Error membaca tab {tipe}: {e}")
+                
+# ... (kode bagian bawah tetap sama) ...
                 
     except Exception as e:
         print(f"Gagal koneksi ke Google Sheets saat memuat data: {e}")
