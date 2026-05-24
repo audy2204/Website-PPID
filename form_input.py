@@ -52,6 +52,8 @@ def pop_up_survei(kategori_laporan, data_mentah):
             st.success(f"Terima kasih! Penilaian '{teks_kepuasan}' Anda telah direkam. Laporan berhasil dikirim! 🙏")
             st.session_state.buka_survei = False
             st.session_state.data_terpilih = None
+            st.session_state.kategori_terpilih = ""
+            st.session_state.tampilkan_ai = False
             st.rerun()
 
 def render_form_input():
@@ -101,6 +103,10 @@ def render_form_input():
             st.session_state.buka_survei = False
             st.session_state.data_terpilih = None
             st.session_state.kategori_terpilih = ""
+
+        # PEMICU DIALOG POP-UP SURVEI SECARA AMAN (Diletakkan di bagian atas alur Form)
+        if st.session_state.buka_survei and st.session_state.data_terpilih is not None:
+            pop_up_survei(st.session_state.kategori_terpilih, st.session_state.data_terpilih)
 
         with st.form("main_form", clear_on_submit=True):
             today = datetime.now().date()
@@ -163,6 +169,15 @@ def render_form_input():
                     "Status": "Terkirim",
                     "Kepuasan Pelanggan": "-"
                 }
+
+                with st.spinner("Sedang mengirim laporan ke database..."):
+                    try:
+                        # Mengubah dictionary menjadi list sesuai urutan kolom Google Sheets kamu
+                        row_data = list(data_simpan.values())
+                        sheet.append_row(row_data) # <--- DI SINI SYNTAXNYA DIPAKAI
+                        st.success("Laporan Anda berhasil terkirim ke database!")
+                    except Exception as e:
+                        st.error(f"Gagal menyimpan ke Google Sheets: {e}")
                 
                 # Cek jika ada lampiran
                 nama_file = lampiran.name if lampiran is not None else "Tidak ada lampiran"
@@ -249,7 +264,7 @@ def render_form_input():
                 st.session_state.buka_survei = True    # Nyalakan trigger pop-up survei
                 st.rerun()
                 
-                # PEMICU DIALOG POP-UP SURVEI 
-        if st.session_state.buka_survei and st.session_state.data_terpilih is not None:
-            pop_up_survei(st.session_state.kategori_terpilih, st.session_state.data_terpilih)
+        #         # PEMICU DIALOG POP-UP SURVEI 
+        # if st.session_state.buka_survei and st.session_state.data_terpilih is not None:
+        #     pop_up_survei(st.session_state.kategori_terpilih, st.session_state.data_terpilih)
     st.markdown("</div>", unsafe_allow_html=True)
